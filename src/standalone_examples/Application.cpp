@@ -40,8 +40,10 @@ int main(void) {
   if (!glfwInit())
     return -1;
 
+  const std::string aim = "Simple Triangle (Example 1, following videos till https://youtu.be/H2E3yO0J7TM)";
+  std::cout << aim << std::endl;
   /* Create a windowed mode window and its OpenGL context */
-  window = glfwCreateWindow(640, 480, "Simple Traingle", NULL, NULL);
+  window = glfwCreateWindow(640, 480, aim.c_str(), NULL, NULL);
   if (!window) {
     glfwTerminate();
     return -1;

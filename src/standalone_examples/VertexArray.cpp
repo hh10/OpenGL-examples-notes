@@ -5,31 +5,7 @@
 #include <iostream>
 #include <sstream>
 
-#define ASSERT(x)                                                              \
-  if (!(x))                                                                    \
-    asm("0:"                                                                   \
-        ".pushsection embed-breakpoints;"                                      \
-        ".quad 0b;"                                                            \
-        ".popsection;");
-#define GLCall(x)                                                              \
-  GLClearError();                                                              \
-  x;                                                                           \
-  ASSERT(GLLogCall(#x, __FILE__, __LINE__));
-
-static void GLClearError() {
-  while (glGetError() != GL_NO_ERROR)
-    ;
-}
-
-static bool GLLogCall(const char *functionName, const char *filePath,
-                      int lineNum) {
-  while (GLenum error = glGetError()) {
-    std::cout << "[OpenGL error] (" << error << "): " << functionName << " "
-              << filePath << " " << lineNum << std::endl;
-    return false;
-  }
-  return true;
-}
+#include "utils.hh"
 
 struct ShaderSources {
   const std::string vertexSource;
@@ -47,11 +23,9 @@ static ShaderSources ParseShader(const std::string &filePath) {
   while (getline(stream, line)) {
     if (line.find("#shader") != std::string::npos) {
       if (line.find("vertex") != std::string::npos) {
-        // its a vertex shader
         shaderType = ShaderType::VERTEX;
       }
       if (line.find("fragment") != std::string::npos) {
-        // its a fragment shader
         shaderType = ShaderType::FRAGMENT;
       }
     } else {
@@ -110,8 +84,10 @@ int main(void) {
   if (!glfwInit())
     return -1;
 
+  const std::string aim = "Rectangle using 2 triangles (Example 6, following videos till https://youtu.be/Bcs56Mm-FJY)";
+  std::cout << aim << std::endl;
   /* Create a windowed mode window and its OpenGL context */
-  window = glfwCreateWindow(640, 480, "Simple Traingle", NULL, NULL);
+  window = glfwCreateWindow(640, 480, aim.c_str(), NULL, NULL);
   if (!window) {
     glfwTerminate();
     return -1;
@@ -120,16 +96,15 @@ int main(void) {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 #ifdef USE_OPENGL_CORE
-  std::cout << "core" << std::endl;
+  std::cout << "OpenGL CORE profile" << std::endl;
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #else
-  std::cout << "compat" << std::endl;
+  std::cout << "OpenGL COMPAT profile" << std::endl;
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 #endif
 
   /* Make the window's context current */
   glfwMakeContextCurrent(window);
-
   glfwSwapInterval(1);
 
   /* It is necessary to create a valid OpenGL rendering context before calling
@@ -150,64 +125,49 @@ int main(void) {
   unsigned int buffer; // the id that represents the buffer created below
   glGenBuffers(1, &buffer);
   glBindBuffer(GL_ARRAY_BUFFER, buffer); // specifying to use this buffer
-  glBufferData(GL_ARRAY_BUFFER, 4 * 2 * sizeof(float), vertexPositions,
-               GL_STATIC_DRAW); // http://docs.gl/gl3/glBufferData
+  glBufferData(GL_ARRAY_BUFFER, 4 * 2 * sizeof(float), vertexPositions, GL_STATIC_DRAW); // http://docs.gl/gl3/glBufferData
 
 // explicit vertex array creation
 #ifdef USE_VERTEX_ARRAY
+  std::cout << "Explicitly creating a vertex array" << std::endl;
   unsigned int vao;
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
 #endif
-
-  /**
-   * index for this attribute
-   * size of the vector for each vertex (2 for 2dVertexPosition, 3 for
-   * 3dVertexPosition, etc.) whether to be normalized (reqd. for colors)
-   * datatype of attribute data
-   * stride- how many bytes to shift from the begining of one vertex in the
-   * buffer to the begining of the next vertex position (pointer)- what is the
-   * byte offset within a single vertex for this attribute
-   */
+  // bound the vertex array as attribute pointer
   GLCall(glEnableVertexAttribArray(
-      0)); // thsi vertex array is the default one, unless a vertex array is
+      0)); // this vertex array is the default one, unless a vertex array is
            // explicitly created above and the index for that is specified
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float),
                         0); // this call binds the attrib layout to the bound
-                            // veretxBuffer which in this case is buffer
+                            // vertexBuffer which in this case is buffer
 
   unsigned int indexBuffer; // the id that represents the buffer created below
   glGenBuffers(1, &indexBuffer);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
-               indexBuffer); // specifying to use this buffer
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices,
-               GL_STATIC_DRAW); // http://docs.gl/gl3/glBufferData
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer); // specifying to use this buffer
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW); // http://docs.gl/gl3/glBufferData
 
-  ShaderSources shaderSources =
-      ParseShader("../src/resources/shaders/BasicShaderWithUniform");
-  /*std::cout << "VERTEX" << std::endl;
-  std::cout << shaderSources.vertexSource << std::endl;
-  std::cout << "FRAGMENT" << std::endl;
-  std::cout << shaderSources.fragmentSource << std::endl;*/
+  ShaderSources shaderSources = ParseShader("../resources/shaders/BasicShaderWithUniform");
+  std::cout << "\n\nSHADER SOURCES:" << std::endl;
+  std::cout << "VERTEX:\n" << shaderSources.vertexSource << std::endl;
+  std::cout << "FRAGMENT:\n" << shaderSources.fragmentSource << std::endl;
+  unsigned int shader = CreateShader(shaderSources.vertexSource, shaderSources.fragmentSource);
+  glUseProgram(shader);  // shader is bound at this point
 
-  unsigned int shader =
-      CreateShader(shaderSources.vertexSource, shaderSources.fragmentSource);
-  glUseProgram(shader);
-
+  // initialize the uniform by retrieving it from the shader
   int ulocation = glGetUniformLocation(shader, "u_Color");
   if (ulocation == -1) {
     std::cout << "Uniform not found..!" << std::endl;
     return 1;
   }
+  glUniform4f(ulocation, 0.5f, 0.0f, 0.0f, 1.0f);
+  float g = 0.0f, incG = 0.05f;
 
   // unbind everything
   glUseProgram(0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-  glUniform4f(ulocation, 0.5f, 0.0f, 0.0f, 1.0f);
-  float g = 0.0f;
-  float incG = 0.05f;
   /* Loop until the user closes the window */
   while (!glfwWindowShouldClose(window)) {
     /* Render here */
@@ -224,10 +184,6 @@ int main(void) {
 #endif
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
 
-    // the glUniform call is one per draw call; can't have different uniforms
-    // for the elements being drawn with a single draw call, unless the uniform
-    // is in terms of the vertex data and that has different color attributes
-    // assigned to it
     glUniform4f(ulocation, 0.5f, g, 0.0f, 1.0f);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
@@ -238,15 +194,10 @@ int main(void) {
     }
     g += incG;
 
-    /* Swap front and back buffers */
     glfwSwapBuffers(window);
-
-    /* Poll for and process events */
     glfwPollEvents();
   }
-  // clean up
   glDeleteProgram(shader);
-
   glfwTerminate();
   return 0;
 }

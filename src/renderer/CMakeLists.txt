@@ -9,4 +9,3 @@ find_package(glfw3 3.2.1 REQUIRED)
 file(GLOB SOURCES "*.cpp")
 add_executable(renderer ${SOURCES})
 target_link_libraries(renderer glfw OpenGL::GL ${GLEW_LIBRARIES})
-

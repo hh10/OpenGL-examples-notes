@@ -5,6 +5,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "utils.hh"
+
 struct ShaderSources {
   const std::string vertexSource;
   const std::string fragmentSource;
@@ -84,8 +86,10 @@ int main(void) {
   if (!glfwInit())
     return -1;
 
+  const std::string aim = "Rectangle using 2 triangles (Example 4, following videos till https://youtu.be/MXNMC1YAxVQ)";
+  std::cout << aim << std::endl;
   /* Create a windowed mode window and its OpenGL context */
-  window = glfwCreateWindow(640, 480, "Simple Traingle", NULL, NULL);
+  window = glfwCreateWindow(640, 480, aim.c_str(), NULL, NULL);
   if (!window) {
     glfwTerminate();
     return -1;
@@ -103,25 +107,15 @@ int main(void) {
   std::cout << glGetString(GL_VERSION) << std::endl;
 
   // drawing rectangle without index buffer
-  //float vertexPositions[12] = {-0.5f, -0.5f, 0.5f, 0.5f, 0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f, 0.5f, 0.5f};
+  // float vertexPositions[12] = {-0.5f, -0.5f, 0.5f, 0.5f, 0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f, 0.5f, 0.5f};
   float vertexPositions[8] = {-0.5f, -0.5f, 0.5f, 0.5f, 0.5f, -0.5f, -0.5f, 0.5f};
-  unsigned int indices[] = {0, 1, 2, 0, 1, 3};
+  unsigned int indices[] = {0, 1, 2, 0, 1, 3};  // the indices must be unsigned {char/int/...}
 
   unsigned int buffer; // the id that represents the buffer created below
   glGenBuffers(1, &buffer);
   glBindBuffer(GL_ARRAY_BUFFER, buffer); // specifying to use this buffer
-  glBufferData(GL_ARRAY_BUFFER, 4 * 2 * sizeof(float), vertexPositions,
-               GL_STATIC_DRAW); // http://docs.gl/gl3/glBufferData
-
-  /**
-   * index for this attribute
-   * size of the vector for each vertex (2 for 2dVertexPosition, 3 for
-   * 3dVertexPosition, etc.) whether to be normalized (reqd. for colors)
-   * datatype of attribute data
-   * stride- how many bytes to shift from the begining of one vertex in the
-   * buffer to the begining of the next vertex position (pointer)- what is the
-   * byte offset within a single vertex for this attribute
-   */
+  glBufferData(GL_ARRAY_BUFFER, 4 * 2 * sizeof(float), vertexPositions, GL_STATIC_DRAW);
+  // vertex attribute
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
   glEnableVertexAttribArray(0);
 
@@ -132,31 +126,28 @@ int main(void) {
                GL_STATIC_DRAW); // http://docs.gl/gl3/glBufferData
 
 
-  ShaderSources shaderSources =
-      ParseShader("../src/resources/shaders/BasicShader");
-  /*std::cout << "VERTEX" << std::endl;
-  std::cout << shaderSources.vertexSource << std::endl;
-  std::cout << "FRAGMENT" << std::endl;
-  std::cout << shaderSources.fragmentSource << std::endl;
-  */
-  unsigned int shader =
-      CreateShader(shaderSources.vertexSource, shaderSources.fragmentSource);
-  glUseProgram(shader);
+  ShaderSources shaderSources = ParseShader("../resources/shaders/BasicShader");
+  std::cout << "\n\nSHADER SOURCES:" << std::endl;
+  std::cout << "VERTEX:\n" << shaderSources.vertexSource << std::endl;
+  std::cout << "FRAGMENT:\n" << shaderSources.fragmentSource << std::endl;
+  unsigned int shader = CreateShader(shaderSources.vertexSource, shaderSources.fragmentSource);
+  glUseProgram(shader);  // bind the shader
 
   /* Loop until the user closes the window */
   while (!glfwWindowShouldClose(window)) {
     /* Render here */
     glClear(GL_COLOR_BUFFER_BIT);
 
-    /*glBegin(GL_TRIANGLES);
+    /* without Array Buffer
+    glBegin(GL_TRIANGLES);
     glVertex2f(-0.5f, -0.5f);
     glVertex2f(0.0f, 0.5f);
     glVertex2f(0.5f, -0.5f);
     glEnd();*/
-    /* // without index buffer
+    /* without index buffer
     glDrawArrays(GL_TRIANGLES, 0, 6);
     */
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
     /* Swap front and back buffers */
     glfwSwapBuffers(window);

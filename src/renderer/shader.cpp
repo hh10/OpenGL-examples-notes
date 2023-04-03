@@ -8,15 +8,12 @@
 
 Shader::Shader(const std::string &filepath)
     : filepath(filepath), rendererId(0) {
-  ShaderSources shaderSources =
-      ParseShader("../src/resources/shaders/BasicShaderWithUniform");
-  /*std::cout << "VERTEX" << std::endl;
-  std::cout << shaderSources.vertexSource << std::endl;
-  std::cout << "FRAGMENT" << std::endl;
-  std::cout << shaderSources.fragmentSource << std::endl;*/
+  ShaderSources shaderSources = ParseShader(filepath);
+  std::cout << "\n\nSHADER loader with SOURCES:" << std::endl;
+  std::cout << "VERTEX:\n" << shaderSources.vertexSource << std::endl;
+  std::cout << "FRAGMENT:\n" << shaderSources.fragmentSource << std::endl;
 
-  rendererId =
-      CreateShader(shaderSources.vertexSource, shaderSources.fragmentSource);
+  rendererId = CreateShader(shaderSources.vertexSource, shaderSources.fragmentSource);
 }
 
 Shader::~Shader() { glDeleteProgram(rendererId); }

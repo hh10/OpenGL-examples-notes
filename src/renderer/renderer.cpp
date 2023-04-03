@@ -38,7 +38,7 @@ int main(void) {
     return -1;
 
   /* Create a windowed mode window and its OpenGL context */
-  window = glfwCreateWindow(640, 480, "Simple Traingle", NULL, NULL);
+  window = glfwCreateWindow(640, 480, "Simple rectangle using 2 triangles rasterized using uniform", NULL, NULL);
   if (!window) {
     glfwTerminate();
     return -1;
@@ -83,7 +83,7 @@ int main(void) {
   vao.AddBufferLayout(vb, vbl);
   IndexBuffer ib(indices, 6);
 
-  Shader shader("../src/resources/shaders/BasicShaderWithUniform");
+  Shader shader("../resources/shaders/BasicShaderWithUniform");
   shader.Bind();
   float color_rgba[4] = {0.5f, 0.0f, 0.0f, 1.0f};
   shader.SetUniform4f("u_Color", color_rgba);
